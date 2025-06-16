@@ -1,7 +1,6 @@
 import os
 import random
 
-# Estruturas de dados para armazenar informações
 usuarios = [
     {"nome": "Ana Silva", "email": "ana.silva@gmail.com", "senha": "123456"},
     {"nome": "Carlos Oliveira", "email": "carlos.oliveira@hotmail.com", "senha": "abcdef"},
@@ -33,10 +32,10 @@ caronas = [
 
 reservas = []
 usuario_logado = None
-cupons_ativos = {}  # Dicionário para armazenar cupons dos usuários: {email: {"codigo": "ABC123", "desconto": 0.1}}
+cupons_ativos = {}
 
 
-# Funções principais
+
 def cadastrar_usuario():
     print("\n--- Cadastro de Usuário ---")
     nome = input("Nome completo: ")
@@ -60,11 +59,11 @@ def cadastrar_usuario():
 
 def gerar_cupom():
     """Gera um cupom de desconto aleatório com 30% de chance"""
-    if random.random() < 0.3:  # 30% de chance de gerar cupom
+    if random.random() < 0.3:
         letras = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         numeros = "0123456789"
         codigo = ''.join(random.choices(letras, k=3)) + ''.join(random.choices(numeros, k=3))
-        desconto = random.uniform(0.05, 0.2)  # Desconto entre 5% e 20%
+        desconto = random.uniform(0.05, 0.2)
         return {"codigo": codigo, "desconto": round(desconto, 2)}
     return None
 
@@ -84,7 +83,7 @@ def login():
         if usuario["email"] == email and usuario["senha"] == senha:
             usuario_logado = usuario
 
-            # Verifica se já tem cupom ativo, se não, gera um novo
+
             if email not in cupons_ativos:
                 cupom = gerar_cupom()
                 if cupom:
@@ -134,7 +133,7 @@ def cadastrar_carona():
         "vagas": vagas,
         "valor": valor,
         "passageiros": [],
-        "vagas_inicial": vagas  # Adicionado para o relatório
+        "vagas_inicial": vagas
     }
     caronas.append(nova_carona)
     print("Carona cadastrada com sucesso!")
@@ -195,7 +194,7 @@ def reservar_vaga():
         if (carona["motorista"] == email_motorista and
                 carona["data"] == data_carona):
             if carona["vagas"] > 0:
-                # Verifica se o usuário tem cupom e quer usá-lo
+
                 valor_final = carona["valor"]
                 desconto_aplicado = 0
 
@@ -208,13 +207,13 @@ def reservar_vaga():
                         print(f"🎉 Cupom aplicado! Desconto de {int(cupom['desconto'] * 100)}%")
                         print(f"Valor original: R${carona['valor']:.2f}")
                         print(f"Valor com desconto: R${valor_final:.2f}")
-                        # Remove o cupom após uso
+
                         del cupons_ativos[usuario_logado["email"]]
 
                 carona["vagas"] -= 1
                 carona["passageiros"].append(usuario_logado["email"])
 
-                # Adiciona detalhes da reserva
+
                 reservas.append({
                     "passageiro": usuario_logado["email"],
                     "motorista": email_motorista,
@@ -248,7 +247,7 @@ def cancelar_reserva():
                 carona["vagas"] += 1
                 carona["passageiros"].remove(usuario_logado["email"])
 
-                # Remove a reserva da lista de reservas
+
                 for reserva in reservas[:]:
                     if (reserva["passageiro"] == usuario_logado["email"] and
                             reserva["motorista"] == email_motorista and
@@ -427,14 +426,14 @@ def importar_usuarios_arquivo():
                     })
 
 
-# Menu principal
+
 def menu_principal():
     while True:
         print("\n--- Sistema de Caronas ---")
         if usuario_logado:
             print(f"Usuário: {usuario_logado['nome']}")
 
-            # Mostra cupom ativo se existir
+
             if usuario_logado["email"] in cupons_ativos:
                 cupom = cupons_ativos[usuario_logado["email"]]
                 print(f"🎟️ Cupom ativo: {cupom['codigo']} ({int(cupom['desconto'] * 100)}% de desconto)")
@@ -494,6 +493,6 @@ def menu_principal():
                 print("Opção inválida!")
 
 
-# Inicialização do sistema
+
 importar_usuarios_arquivo()
 menu_principal()
