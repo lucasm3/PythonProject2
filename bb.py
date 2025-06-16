@@ -1,4 +1,5 @@
 import os
+import random
 
 # Estruturas de dados para armazenar informações
 usuarios = [
@@ -32,6 +33,7 @@ caronas = [
 
 reservas = []
 usuario_logado = None
+cupons_ativos = {}  # Dicionário para armazenar cupons dos usuários: {email: {"codigo": "ABC123", "desconto": 0.1}}
 
 
 # Funções principais
@@ -56,6 +58,17 @@ def cadastrar_usuario():
     print("Usuário cadastrado com sucesso!")
 
 
+def gerar_cupom():
+    """Gera um cupom de desconto aleatório com 30% de chance"""
+    if random.random() < 0.3:  # 30% de chance de gerar cupom
+        letras = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        numeros = "0123456789"
+        codigo = ''.join(random.choices(letras, k=3)) + ''.join(random.choices(numeros, k=3))
+        desconto = random.uniform(0.05, 0.2)  # Desconto entre 5% e 20%
+        return {"codigo": codigo, "desconto": round(desconto, 2)}
+    return None
+
+
 def login():
     global usuario_logado
     print("\n--- Login ---")
@@ -70,7 +83,18 @@ def login():
     for usuario in usuarios:
         if usuario["email"] == email and usuario["senha"] == senha:
             usuario_logado = usuario
-            print(f"Bem-vindo, {usuario['nome']}!")
+
+            # Verifica se já tem cupom ativo, se não, gera um novo
+            if email not in cupons_ativos:
+                cupom = gerar_cupom()
+                if cupom:
+                    cupons_ativos[email] = cupom
+                    print(f"\n🎉 Parabéns! Você ganhou um cupom de desconto!")
+                    print(f"Código: {cupom['codigo']}")
+                    print(f"Desconto: {int(cupom['desconto'] * 100)}%")
+                    print("Use este cupom ao reservar uma carona!")
+
+            print(f"\nBem-vindo, {usuario['nome']}!")
             return True
 
     print("Email ou senha incorretos!")
@@ -80,7 +104,7 @@ def login():
 def validar_email(email):
     """Verifica se o email tem formato válido"""
     return "@" in email and (
-                email.endswith(".com") or email.endswith(".com.br") or email.endswith(".org") or email.endswith(".net"))
+            email.endswith(".com") or email.endswith(".com.br") or email.endswith(".org") or email.endswith(".net"))
 
 
 def logout():
@@ -171,8 +195,35 @@ def reservar_vaga():
         if (carona["motorista"] == email_motorista and
                 carona["data"] == data_carona):
             if carona["vagas"] > 0:
+                # Verifica se o usuário tem cupom e quer usá-lo
+                valor_final = carona["valor"]
+                desconto_aplicado = 0
+
+                if usuario_logado["email"] in cupons_ativos:
+                    usar_cupom = input("Você tem um cupom de desconto. Deseja usá-lo? (sim/não): ")
+                    if usar_cupom.lower() == "sim":
+                        cupom = cupons_ativos[usuario_logado["email"]]
+                        desconto_aplicado = carona["valor"] * cupom["desconto"]
+                        valor_final = carona["valor"] - desconto_aplicado
+                        print(f"🎉 Cupom aplicado! Desconto de {int(cupom['desconto'] * 100)}%")
+                        print(f"Valor original: R${carona['valor']:.2f}")
+                        print(f"Valor com desconto: R${valor_final:.2f}")
+                        # Remove o cupom após uso
+                        del cupons_ativos[usuario_logado["email"]]
+
                 carona["vagas"] -= 1
                 carona["passageiros"].append(usuario_logado["email"])
+
+                # Adiciona detalhes da reserva
+                reservas.append({
+                    "passageiro": usuario_logado["email"],
+                    "motorista": email_motorista,
+                    "data": data_carona,
+                    "valor_original": carona["valor"],
+                    "desconto": desconto_aplicado,
+                    "valor_pago": valor_final
+                })
+
                 print("Vaga reservada com sucesso!")
                 return
             else:
@@ -196,6 +247,14 @@ def cancelar_reserva():
             if usuario_logado["email"] in carona["passageiros"]:
                 carona["vagas"] += 1
                 carona["passageiros"].remove(usuario_logado["email"])
+
+                # Remove a reserva da lista de reservas
+                for reserva in reservas[:]:
+                    if (reserva["passageiro"] == usuario_logado["email"] and
+                            reserva["motorista"] == email_motorista and
+                            reserva["data"] == data_carona):
+                        reservas.remove(reserva)
+
                 print("Reserva cancelada com sucesso!")
                 return
             else:
@@ -319,13 +378,15 @@ def mostrar_minhas_reservas():
     print("\n--- Minhas Reservas ---")
     encontrou = False
 
-    for carona in caronas:
-        if usuario_logado["email"] in carona["passageiros"]:
+    for reserva in reservas:
+        if reserva["passageiro"] == usuario_logado["email"]:
             encontrou = True
-            print(f"Motorista: {obter_nome_por_email(carona['motorista'])}")
-            print(f"Origem: {carona['origem']} | Destino: {carona['destino']}")
-            print(f"Data: {carona['data']} | Horário: {carona['horario']}")
-            print(f"Valor: R${carona['valor']:.2f}")
+            print(f"Motorista: {obter_nome_por_email(reserva['motorista'])}")
+            print(f"Data: {reserva['data']}")
+            print(f"Valor original: R${reserva['valor_original']:.2f}")
+            if reserva["desconto"] > 0:
+                print(f"Desconto: R${reserva['desconto']:.2f}")
+            print(f"Valor pago: R${reserva['valor_pago']:.2f}")
             print("------------------------")
 
     if not encontrou:
@@ -372,6 +433,12 @@ def menu_principal():
         print("\n--- Sistema de Caronas ---")
         if usuario_logado:
             print(f"Usuário: {usuario_logado['nome']}")
+
+            # Mostra cupom ativo se existir
+            if usuario_logado["email"] in cupons_ativos:
+                cupom = cupons_ativos[usuario_logado["email"]]
+                print(f"🎟️ Cupom ativo: {cupom['codigo']} ({int(cupom['desconto'] * 100)}% de desconto)")
+
             print("1. Cadastrar Carona")
             print("2. Listar Caronas Disponíveis")
             print("3. Buscar Carona por Origem/Destino")
