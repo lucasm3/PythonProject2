@@ -336,7 +336,9 @@ def relatorio_totalizadores():
     for carona in caronas:
         if carona["motorista"] == usuario_logado["email"]:
             encontrou = True
-            vagas_ocupadas = carona["vagas_inicial"] - carona["vagas"]
+            # Usando get() para evitar KeyError, assumindo vagas_inicial = vagas se não existir
+            vagas_inicial = carona.get("vagas_inicial", carona["vagas"])
+            vagas_ocupadas = vagas_inicial - carona["vagas"]
             total_carona = vagas_ocupadas * carona["valor"]
             total_geral += total_carona
 
@@ -356,7 +358,8 @@ def relatorio_totalizadores():
                 f.write(f"Relatório de Caronas - {usuario_logado['nome']}\n\n")
                 for carona in caronas:
                     if carona["motorista"] == usuario_logado["email"]:
-                        vagas_ocupadas = carona["vagas_inicial"] - carona["vagas"]
+                        vagas_inicial = carona.get("vagas_inicial", carona["vagas"])
+                        vagas_ocupadas = vagas_inicial - carona["vagas"]
                         total_carona = vagas_ocupadas * carona["valor"]
 
                         f.write(f"Origem: {carona['origem']} | Destino: {carona['destino']}\n")
@@ -368,7 +371,6 @@ def relatorio_totalizadores():
             print(f"Relatório salvo em {nome_arquivo}")
     else:
         print("Não há caronas cadastradas")
-
 
 def mostrar_minhas_reservas():
     if not verificar_login():
